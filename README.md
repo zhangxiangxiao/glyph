@@ -8,4 +8,4 @@ The code is not yet completely released. Will update here when it is done.
 
 ## Reproducibility Manifesto
 
-If anyone sees a number in our paper, there is a script one can execute to reproduce it. No responsibility should be imposed on the user to figure out any experimental parameters barried in the paper's content.
+If anyone sees a number in our paper, there is a script one can execute to reproduce it. No responsibility should be imposed on the user to figure out any experimental parameter barried in the paper's content.
