@@ -1,0 +1,1 @@
+../dianping/remove_null.sh

@@ -1,0 +1,1 @@
+../dianping/construct_pinyin.py
