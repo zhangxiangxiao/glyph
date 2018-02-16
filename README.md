@@ -55,3 +55,7 @@ Datasets are released separtely of the source code via links from Google Drive. 
 | NYTimes        | [Link](https://goo.gl/2hZeqd)  | [Link](https://goo.gl/66EDa5) |
 | Joint full     | [Link](https://goo.gl/AJfzLC)  | [Link](https://goo.gl/mibMsV) |
 | Joint binary   | [Link](https://goo.gl/YLMqNe)  | [Link](https://goo.gl/WRXQuJ) |
+
+## GNU Unifont
+
+The `glyphnet` scripts require the GNU Unifont character images to run. The file `unifont-8.0.01.t7b.xz` can be downloaded via [this link](https://goo.gl/aFxYHq).
