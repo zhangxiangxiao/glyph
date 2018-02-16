@@ -6,6 +6,10 @@ This repository is used to publish all the code used for the following article:
 
 The code is not yet completely released. Will update here when it is done.
 
+## Datasets
+
+The original text samples for all the datasets have been released. Please check the `data` directory for more details.
+
 ## Reproducibility Manifesto
 
 If anyone sees a number in our paper, there is a script one can execute to reproduce it. No responsibility should be imposed on the user to figure out any experimental parameter barried in the paper's content.
