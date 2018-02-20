@@ -507,7 +507,7 @@ This is possible because the word segmentation process previously done for roman
 To construct the TFIDF feature, simply execute the following commands from `/data/dianping`
 
 ```bash
-th construct_tfidf.lua ../data/dianping/train_pinyin_wordbag.t7b ../data/dianping/train_pinyin_wordbagtfidf.t7b ../data/dianping/train_word_list.csv 200000
+th construct_tfidf.lua ../data/dianping/train_pinyin_wordbag.t7b ../data/dianping/train_pinyin_wordbagtfidf.t7b ../data/dianping/train_pinyin_word_list.csv 200000
 th construct_tfidf.lua ../data/dianping/test_pinyin_wordbag.t7b ../data/dianping/test_pinyin_wordbagtfidf.t7b ../data/dianping/train_pinyin_word_list.csv 200000
 ```
 
@@ -554,7 +554,7 @@ The commands proceeds by first using 10 threads to construct chunks of counts of
 Then, you can build the word-level 5-gram feature serialization files for romanized text using the following commands from `/data/dianping`
 
 ```bash
-th construct_wordgram.lua ../data/dianping/train_pinyin_word.t7b ../data/dianping/train_pinyin_wordgram.t7b ../data/dianping/train_pinyin_wordgram_list_limit.csv
+th construct_wordgram.lua ../data/dianping/train_pinyin_word.t7b ../data/dianping/train_pinyin_wordgram.t7b ../data/dianping/trainpinyin_wordgram_list_limit.csv
 th construct_wordgram.lua ../data/dianping/test_pinyin_word.t7b ../data/dianping/test_pinyin_wordgram.t7b ../data/dianping/train_pinyin_wordgram_list_limit.csv
 ```
 
@@ -577,6 +577,7 @@ mkdir -p models/dianping/wordgramroman
 ```
 
 And for the TFIDF version
+
 ```bash
 mkdir -p models/dianping/wordgramtfidfroman
 ./archive/dianping_wordgramtfidfroman.sh
@@ -584,9 +585,220 @@ mkdir -p models/dianping/wordgramtfidfroman
 
 ## fastText
 
+This section introduces how to build the token files and run experiments for the fastText models. Note that before being able to execute the experiments in this section, you must make sure that you have [fastText](https://github.com/facebookresearch/fastText) installed and there is `fasttext` command in your `PATH`.
+
 ### Character-Level fastText for Original Text
+
+We first build the token files for character-level fastText, and then detail how to execute the experiments.
+
+#### Build Character-Level Token Files
+
+To build the character token files from the original text files, execute the following commands from `/data/dianping`
+
+```bash
+th construct_chartoken.lua ../data/dianping/train.csv ../data/dianping/train_chartoken.txt
+th construct_chartoken.lua ../data/dianping/test.csv ../data/dianping/test_chartoken.txt
+```
+
+Optionally, you can also build the evaluation token files by separating the training dataset to a 1:9 ratio.
+
+```bash
+./shuffle_lines.sh ../data/dianping/train_chartoken.txt ../data/dianping/train_chartoken_shuffle.txt
+./split_lines.sh 1800000 ../data/dianping/train_chartoken_shuffle.txt ../data/dianping/train_chartoken_shuffle_split_
+```
+
+Note that the second command above will produce 2 files `train_chartoken_shuffle_split_0.txt` and `train_chartoken_shuffle_split_1.txt`.
+
+#### Execute the Experiments
+
+To execute the character-level 1-gram evaluation experiment, do the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/charunigram_evaluation
+./archive/dianping_charunigram_evaluation.sh
+```
+
+This will iterate through 2, 5 and 10 epoches for the best option on the evaluation data. You can check whether the evaluated hyperparameter confirms with that in the paper.
+
+To execute the character-level 1-gram experiment, use the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/charunigram_tuned
+./archive/dianping_charunigram_tuned.sh
+```
+
+To execute the character-level 2-gram evaluation experiment, do the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/charbigram_evaluation
+./archive/dianping_charbigram_evaluation.sh
+```
+
+This will iterate through 2, 5 and 10 epoches for the best option on the evaluation data. You can check whether the evaluated hyperparameter confirms with that in the paper.
+
+To execute the character-level 2-gram experiment, use the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/charbigram_tuned
+./archive/dianping_charbigram_tuned.sh
+```
+
+To execute the character-level 5-gram evaluation experiment, do the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/charpentagram_evaluation
+./archive/dianping_charpentagram_evaluation.sh
+```
+
+This will iterate through 2, 5 and 10 epoches for the best option on the evaluation data. You can check whether the evaluated hyperparameter confirms with that in the paper.
+
+To execute the character-level 5-gram experiment, use the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/charpentagram_tuned
+./archive/dianping_charpentagram_tuned.sh
+```
 
 ### Word-Level fastText for Original Text
 
+We first build the token files for word-level fastText, and then detail how to execute the experiments.
+
+#### Build Word-Level Token Files
+
+To build the word token files from the original text files, execute the following commands from `/data/dianping`
+
+```bash
+th construct_wordtoken.lua ../data/dianping/train_word.csv ../data/dianping/train_word_list.csv ../data/dianping/train_wordtoken.txt
+th construct_wordtoken.lua ../data/dianping/test_word.csv ../data/dianping/train_word_list.csv ../data/dianping/test_wordtoken.txt
+```
+
+Optionally, you can also build the evaluation token files by separating the training dataset to a 1:9 ratio.
+
+```bash
+./shuffle_lines.sh ../data/dianping/train_wordtoken.txt ../data/dianping/train_wordtoken_shuffle.txt
+./split_lines.sh 1800000 ../data/dianping/train_wordtoken_shuffle.txt ../data/dianping/train_wordtoken_shuffle_split_
+```
+
+Note that the second command above will produce 2 files `train_wordtoken_shuffle_split_0.txt` and `train_wordtoken_shuffle_split_1.txt`.
+
+#### Execute the Experiments
+
+To execute the word-level 1-gram evaluation experiment, do the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/wordunigram_evaluation
+./archive/dianping_wordunigram_evaluation.sh
+```
+
+This will iterate through 2, 5 and 10 epoches for the best option on the evaluation data. You can check whether the evaluated hyperparameter confirms with that in the paper.
+
+To execute the word-level 1-gram experiment, use the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/wordunigram_tuned
+./archive/dianping_wordunigram_tuned.sh
+```
+
+To execute the word-level 2-gram evaluation experiment, do the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/wordbigram_evaluation
+./archive/dianping_wordbigram_evaluation.sh
+```
+
+This will iterate through 2, 5 and 10 epoches for the best option on the evaluation data. You can check whether the evaluated hyperparameter confirms with that in the paper.
+
+To execute the word-level 2-gram experiment, use the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/wordbigram_tuned
+./archive/dianping_wordbigram_tuned.sh
+```
+
+To execute the word-level 5-gram evaluation experiment, do the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/wordpentagram_evaluation
+./archive/dianping_wordpentagram_evaluation.sh
+```
+
+This will iterate through 2, 5 and 10 epoches for the best option on the evaluation data. You can check whether the evaluated hyperparameter confirms with that in the paper.
+
+To execute the word-level 5-gram experiment, use the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/wordpentagram_tuned
+./archive/dianping_wordpentagram_tuned.sh
+```
+
 ### Word-Level fastText for Romanized Text
 
+We first build the token files for word-level fastText on romanized test, and then detail how to execute the experiments.
+
+#### Build Word-Level Token Files
+
+To build the word token files from the original text files, execute the following commands from `/data/dianping`
+
+```bash
+th construct_wordtoken.lua ../data/dianping/train_pinyin_word.csv ../data/dianping/train_word_pinyin_list.csv ../data/dianping/train_pinyin_wordtoken.txt
+th construct_wordtoken.lua ../data/dianping/test_pinyin_word.csv ../data/dianping/train_pinyin_word_list.csv ../data/dianping/test_pinyin_wordtoken.txt
+```
+
+Optionally, you can also build the evaluation token files by separating the training dataset to a 1:9 ratio.
+
+```bash
+./shuffle_lines.sh ../data/dianping/train_pinyin_wordtoken.txt ../data/dianping/train_pinyin_wordtoken_shuffle.txt
+./split_lines.sh 1800000 ../data/dianping/train_pinyin_wordtoken_shuffle.txt ../data/dianping/train_pinyin_wordtoken_shuffle_split_
+```
+
+Note that the second command above will produce 2 files `train_pinyin_wordtoken_shuffle_split_0.txt` and `train_pinyin_wordtoken_shuffle_split_1.txt`.
+
+#### Execute the Experiments
+
+To execute the word-level 1-gram evaluation experiment on romanized text, do the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/wordunigramroman_evaluation
+./archive/dianping_wordunigramroman_evaluation.sh
+```
+
+This will iterate through 2, 5 and 10 epoches for the best option on the evaluation data. You can check whether the evaluated hyperparameter confirms with that in the paper.
+
+To execute the word-level 1-gram experiment on romanized text, use the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/wordunigramroman_tuned
+./archive/dianping_wordunigramroman_tuned.sh
+```
+
+To execute the word-level 2-gram evaluation experiment on romanized text, do the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/wordbigramroman_evaluation
+./archive/dianping_wordbigramroman_evaluation.sh
+```
+
+This will iterate through 2, 5 and 10 epoches for the best option on the evaluation data. You can check whether the evaluated hyperparameter confirms with that in the paper.
+
+To execute the word-level 2-gram experiment on romanized text, use the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/wordbigramroman_tuned
+./archive/dianping_wordbigramroman_tuned.sh
+```
+
+To execute the word-level 5-gram evaluation experiment on romanized text, do the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/wordpentagramroman_evaluation
+./archive/dianping_wordpentagramroman_evaluation.sh
+```
+
+This will iterate through 2, 5 and 10 epoches for the best option on the evaluation data. You can check whether the evaluated hyperparameter confirms with that in the paper.
+
+To execute the word-level 5-gram experiment on romanized text, use the following commands from `/fasttext`
+
+```bash
+mkdir -p models/dianping/wordpentagramroman_tuned
+./archive/dianping_wordpentagramroman_tuned.sh
+```
