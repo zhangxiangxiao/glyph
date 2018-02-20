@@ -8,8 +8,6 @@ The root directory `/` in this documentation indicates the root directory of thi
 
 Original text data for training and testing are available via these two links: [`train.csv.xz`](https://goo.gl/uKPxyo) [`test.csv.xz`](https://goo.gl/2QZpLx). When you download them, make sure to put them in the `/data/data/dianping` directory and unxz so that you have `train.csv` and `test.csv` available.
 
-In the case that some preprocessing scripts may not output exactly the same results due to intrinsic randomness, we also provide the preprocessed intermediate results for your convenience in the documentation. These intrinsic randomness may include inconsistencies between versions of toolkits or random orders when executing multi-threaded processing scripts.
-
 ## GlyphNet
 
 This section introduces how to prepare and run GlyphNet experiments.
@@ -101,8 +99,6 @@ Switch the working directory to `/data/dianping`, the following commands convert
 python3 construct_pinyin.py -i ../data/dianping/train.csv -o ../data/dianping/train_pinyin.csv
 python3 construct_pinyin.py -i ../data/dianping/test.csv -o ../data/dianping/test_pinyin.csv
 ```
-
-For you convenience, we also release prebuilt files [`train_pinyin.csv.xz`](https://goo.gl/zZDfXq) and [`test_pinyin.csv.xz`](https://goo.gl/JjKEht) in case the previous pipelines do not produce exactly the same romanization as they did for the results in the paper.
 
 Then, we can use `construct_string.lua` again for constructing the byte serialization of romanized texts.
 
@@ -221,8 +217,6 @@ python3 segment_word.py -i ../data/dianping/test.csv -o ../data/dianping/test_wo
 ```
 
 The first command generate 2 data files. `train_word.csv` is a file containing sequences of indices of segmented words from the original text fields, whereas `train_word_list.csv` contains the list of words. The second command read the same list of words generated from the training data (therefore the `-r` option) and use that list to build sequences for the testing data. This is done deliberately so that new words not in the training data are not considered for classification results.
-
-In case you do not obtain the same word segmentation results as in the paper, we also release files [`train_word.csv.xz`](https://goo.gl/7nD3aJ), [`test_word.csv.xz`](https://goo.gl/49GB24) and [`train_word_list.csv.xz`](https://goo.gl/g4JF1B) here.
 
 The second step is to build the word serialization files from the segmentation results.
 
