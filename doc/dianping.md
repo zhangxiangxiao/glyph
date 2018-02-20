@@ -54,7 +54,7 @@ mkdir -p models/dianping/spatial8temporal12length512feature256
 ./archive/dianping_spatial8temporal12length512feature256.sh
 ```
 
-The first command simply creates a directory where checkpointing files will be written into during training. Note that the shell scripts also accepts command-line parameters and can pass it directly to the training program. The most useful ones are probably `-driver_visualize false` and `-driver_plot false`, that disable visualization and plotting so that you can run the training programs on a headless server.
+The first command simply creates a directory where checkpointing files will be written into during training. Note that the shell scripts also accepts command-line parameters and can pass it directly to the training program. The most useful ones are probably `-driver_visualize false` and `-driver_plot false`, that disable visualization and plotting so that you can run the training programs on a headless server. You can also use `-driver_resume true` to resume from checkpointed experiments. These parameters are available for all Torch 7 training programs.
 
 Similarly, the following commands execute the experiment for the small GlyphNet
 
@@ -222,7 +222,7 @@ python3 segment_word.py -i ../data/dianping/test.csv -o ../data/dianping/test_wo
 
 The first command generate 2 data files. `train_word.csv` is a file containing sequences of indices of segmented words from the original text fields, whereas `train_word_list.csv` contains the list of words. The second command read the same list of words generated from the training data (therefore the `-r` option) and use that list to build sequences for the testing data. This is done deliberately so that new words not in the training data are not considered for classification results.
 
-In case you do not obtain the same word segmentation results as in the paper, we also release files [train_word.csv.xz](https://goo.gl/7nD3aJ), [test_word.csv.xz](https://goo.gl/49GB24) and [train_word_list.csv.xz](https://goo.gl/g4JF1B) here.
+In case you do not obtain the same word segmentation results as in the paper, we also release files [`train_word.csv.xz`](https://goo.gl/7nD3aJ), [`test_word.csv.xz`](https://goo.gl/49GB24) and [`train_word_list.csv.xz`](https://goo.gl/g4JF1B) here.
 
 The second step is to build the word serialization files from the segmentation results.
 
@@ -287,17 +287,300 @@ mkdir -p models/dianping/temporal8length486feature256romanword
 
 ## Linear Model
 
+This section details how to reproduce the results for linear models.
+
 ### Character-Level 1-Gram Linear Model for Original Text
+
+To run the linear model for using bag-of-character features, we need to build the feature serialization files first.
+
+#### Build Character-Level 1-Gram Feature Serialization Files
+
+To build the character-level 1-gram feature serialization files, execute the following commands from `/data/dianping`.
+
+```bash
+th construct_charbag.lua ../data/dianping/train_code.t7b ../data/dianping/train_charbag.t7b ../data/dianping/train_charbag_list.csv
+th construct_charbag.lua ../data/dianping/test_code.t7b ../data/dianping/test_charbag.t7b ../data/dianping/train_charbag_list.csv true
+```
+
+The first command creates a file `train_charbag.t7b`, which contains a table that has the following members
+
+* `bag`: a table where `bag[i]` contains a n-by-2 `LongTensor`. It contains the beginning index and length of values in `bag_index` and `bag_value` for each sample.
+* `bag_index`: a 1-D `LongTensor` that contains the character indices of all samples.
+* `bag_value`: a 1-D `DoubleTensor` that contains the frequency of the corresponding character indices.
+
+The seond command creates the feature serialization file for testing data, but using the same character index that was created from training data. The additional `true` parameter means to read from list rather than create a new one.
+
+All of the feature serialization files for linear models has the same data structure design.
+
+To prepare feature serialization files for the TFIDF variant of bag-of-character linear model, execute the following commands from `/data/dianping`
+
+```bash
+th construct_tfidf.lua ../data/dianping/train_charbag.t7b ../data/dianping/train_charbagtfidf.t7b ../data/dianping/train_charbag_list.csv
+th construct_tfidf.lua ../data/dianping/test_charbag.t7b ../data/dianping/test_charbagtfidf.t7b ../data/dianping/train_charbag_list.csv
+```
+
+Note that constructing serialization files for testing data still uses the character frequency list from training data.
+
+#### Execute the Experiments
+
+To execute the experiment for character-level 1-gram linear model, execute the following commands from `/linearnet`
+
+```bash
+mkdir -p models/dianping/charbag
+./archive/dianping_charbag.sh
+```
+
+To execute the experiment for the TFIDF version, execute the following command from `/linearnet`
+
+```bash
+mkdir -p models/dianping/charbagtfidf
+./archive/dianping_charbagtfidf.sh
+```
 
 ### Character-Level 5-Gram Linear Model for Original Text
 
+Before being able to execute the 5-gram experiments, we have to build the feature serialization files first.
+
+#### Build Character-Level 5-Gram Feature Serialization Files
+
+In this work, 5-gram features actually mean features of grams from 1 to 5. It is usually infeasible to store all of these feature in memory, and building the features coud take a significant amount of time. Therefore, we build a list of grams ranked by their frequency via a multi-threaded program first, and then build the 5-gram feature serialization files using it.
+
+To build the list of character grams, execute the following commands from `/data/dianping`
+
+```bash
+mkdir -p ../data/dianping/train_chargram_count
+th count_chargram.lua ../data/dianping/train_code.t7b ../data/dianping/train_chargram_count/
+
+mkdir -p ../data/dianping/train_chargram_count_sort
+./sort_gram_count.sh ../data/dianping/train_chargram_count ../data/dianping/train_chargram_count_sort /tmp
+
+th combine_gram_count.lua ../data/dianping/train_chargram_count_sort/ ../data/dianping/train_chargram_count_combine.csv
+
+./sort_gram_list.sh ../data/dianping/train_chargram_count_combine.csv ../data/dianping/train_chargram_list.csv
+
+./limit_csv_lines.sh ../data/dianping/train_chargram_list.csv ../data/dianping/train_chargram_list_limit.csv 1000001
+```
+
+The commands proceeds by first using 10 threads to construct chunks of counts of character grams, and then sort and combine them to form the combined list. It is then sorted to list grams by its frequency, and finally we choose the 1,000,001 most frequent ones. This should be enough because we are limiting the number of features in 5-gram models to 1,000,000.
+
+Then, you can build the character-level 5-gram feature serialization files using the following commands from `/data/dianping`
+
+```bash
+th construct_chargram.lua ../data/dianping/train_code.t7b ../data/dianping/train_chargram.t7b ../data/dianping/train_chargram_list_limit.csv
+th construct_chargram.lua ../data/dianping/test_code.t7b ../data/dianping/test_chargram.t7b ../data/dianping/train_chargram_list_limit.csv
+```
+
+Note that the features for testing data are built using the gram list from the training data.
+
+To build the feature serialization files for TFIDF version of the model, execute the following commands from `/data/dianping`
+
+```bash
+th construct_tfidf.lua ../data/dianping/train_chargram.t7b ../data/dianping/train_chargramtfidf.t7b ../data/dianping/train_chargram_list_limit.csv 1000000
+th construct_tfidf.lua ../data/dianping/test_chargram.t7b ../data/dianping/test_chargramtfidf.t7b ../data/dianping/train_chargram_list_limit.csv 1000000
+```
+
+#### Execute the Experiments
+
+To execute the experiment for character-level 5-gram linear model, run the following commands from `/linearnet`
+
+```bash
+mkdir -p models/dianping/chargram
+./archive/dianping_chargram.sh
+```
+
+And for the TFIDF version
+
+```bash
+mkdir -p models/dianping/chargramtfidf
+./archive/dianping_chargramtfidf.sh
+```
+
 ### Word-Level 1-Gram Linear Model for Original Text
+
+This section first introduces how to build bag-of-word features, and then details how to execute the experiments.
+
+#### Build Word-Level 1-Gram Feature Serialization Files
+
+The following commands from `/data/dianping` can create the word-level 1-gram features for linear model
+
+```bash
+th construct_wordbag.lua ../data/dianping/train_word.t7b ../data/dianping/train_wordbag.t7b 200000 200001
+th construct_wordbag.lua ../data/dianping/test_word.t7b ../data/dianping/test_wordbag.t7b 200000 200001
+```
+
+This is possible because the word segmentation process previously done for word-level EmbedNet already sorts the words by its frequency from the training data. The program also automatically limit the number of features to 200000 and replace all other features to the 200001-th one.
+
+To construct the TFIDF feature, simply execute the following commands from `/data/dianping`
+
+```bash
+th construct_tfidf.lua ../data/dianping/train_wordbag.t7b ../data/dianping/train_wordbagtfidf.t7b ../data/dianping/train_word_list.csv 200000
+th construct_tfidf.lua ../data/dianping/test_wordbag.t7b ../data/dianping/test_wordbagtfidf.t7b ../data/dianping/train_word_list.csv 200000
+```
+
+#### Execute the Experiments
+
+From `/linearnet`, the following commands execute the experiment for bag-of-word model
+
+```bash
+mkdir -p models/dianping/wordbag
+./archive/dianping_wordbag.sh
+```
+
+And for the TFIDF version
+
+```bash
+mkdir -p models/dianping/wordbagtfidf
+./archive/dianping_wordbagtfidf.sh
+```
 
 ### Word-Level 5-Gram Linear Model for Original Text
 
+This section introduces how to build word-level 5-gram feature serialization files and how to execute the experiments.
+
+#### Build Word-Level 5-Gram Feature Serialization Files
+
+Similar to the character-level 5-gram features, we need a multi-threaded program to build the list of grams first before being able to build the feature serialization files. The list can be built by executing the following commands from `/data/dianping`
+
+```bash
+mkdir -p ../data/dianping/train_wordgram_count
+th count_wordgram.lua ../data/dianping/train_word.t7b ../data/dianping/train_wordgram_count/ ../data/dianping/train_word_list.csv
+
+mkdir -p ../data/dianping/train_wordgram_count_sort
+./sort_gram_count.sh ../data/dianping/train_wordgram_count ../data/dianping/train_wordgram_count_sort /tmp
+
+th combine_gram_count.lua ../data/dianping/train_wordgram_count_sort/ ../data/dianping/train_wordgram_count_combine.csv
+
+./sort_gram_list.sh ../data/dianping/train_wordgram_count_combine.csv ../data/dianping/train_wordgram_list.csv
+
+./limit_csv_lines.sh ../data/dianping/train_wordgram_list.csv ../data/dianping/train_wordgram_list_limit.csv 1000001
+```
+
+The commands proceeds by first using 10 threads to construct chunks of counts of word grams, and then sort and combine them to form the combined list. It is then sorted to list grams by its frequency, and finally we choose the 1,000,001 most frequent ones. This should be enough because we are limiting the number of features in 5-gram models to 1,000,000.
+
+Then, you can build the word-level 5-gram feature serialization files using the following commands from `/data/dianping`
+
+```bash
+th construct_wordgram.lua ../data/dianping/train_word.t7b ../data/dianping/train_wordgram.t7b ../data/dianping/train_wordgram_list_limit.csv
+th construct_wordgram.lua ../data/dianping/test_word.t7b ../data/dianping/test_wordgram.t7b ../data/dianping/train_wordgram_list_limit.csv
+```
+
+Note that the features for testing data are built using the gram list from the training data.
+
+To build the feature serialization files for TFIDF version of the model, execute the following commands from `/data/dianping`
+
+```bash
+th construct_tfidf.lua ../data/dianping/train_wordgram.t7b ../data/dianping/train_wordgramtfidf.t7b ../data/dianping/train_wordgram_list_limit.csv 1000000
+th construct_tfidf.lua ../data/dianping/test_wordgram.t7b ../data/dianping/test_wordgramtfidf.t7b ../data/dianping/train_wordgram_list_limit.csv 1000000
+```
+
+#### Execute the Experiments
+
+To execute the experiment for word-level 5-gram linear model, run the following commands from `/linearnet`
+
+```bash
+mkdir -p models/dianping/wordgram
+./archive/dianping_wordgram.sh
+```
+
+And for the TFIDF version
+
+```bash
+mkdir -p models/dianping/wordgramtfidf
+./archive/dianping_wordgramtfidf.sh
+```
+
 ### Word-Level 1-Gram Linear Model for Romanized Text
 
+This section first introduces how to build bag-of-word features for romanized text, and then details how to execute the experiments.
+
+#### Build Word-Level 1-Gram Feature Serialization Files
+
+The following commands from `/data/dianping` can create the word-level 1-gram features for romanized text
+
+```bash
+th construct_wordbag.lua ../data/dianping/train_pinyin_word.t7b ../data/dianping/train_pinyin_wordbag.t7b 200000 200001
+th construct_wordbag.lua ../data/dianping/test_pinyin_word.t7b ../data/dianping/test_pinyin_wordbag.t7b 200000 200001
+```
+
+This is possible because the word segmentation process previously done for romanized word-level EmbedNet already sorts the words by its frequency from the training data. The program also automatically limit the number of features to 200000 and replace all other features to the 200001-th one.
+
+To construct the TFIDF feature, simply execute the following commands from `/data/dianping`
+
+```bash
+th construct_tfidf.lua ../data/dianping/train_pinyin_wordbag.t7b ../data/dianping/train_pinyin_wordbagtfidf.t7b ../data/dianping/train_word_list.csv 200000
+th construct_tfidf.lua ../data/dianping/test_pinyin_wordbag.t7b ../data/dianping/test_pinyin_wordbagtfidf.t7b ../data/dianping/train_pinyin_word_list.csv 200000
+```
+
+#### Execute the Experiments
+
+From `/linearnet`, the following commands execute the experiment for bag-of-word model for romanized text
+
+```bash
+mkdir -p models/dianping/wordbagroman
+./archive/dianping_wordbagroman.sh
+```
+
+And for the TFIDF version
+
+```bash
+mkdir -p models/dianping/wordbagtfidfroman
+./archive/dianping_wordbagtfidfroman.sh
+```
+
 ### Word-Level 5-Gram Linear Model for Romanized Text
+
+This section introduces how to build word-level 5-gram feature serialization files for romanized text and how to execute the experiments.
+
+#### Build Word-Level 5-Gram Feature Serialization Files
+
+Similar to the character-level 5-gram features, we need a multi-threaded program to build the list of grams first before being able to build the feature serialization files. The list can be built by executing the following commands from `/data/dianping`
+
+```bash
+mkdir -p ../data/dianping/train_pinyin_wordgram_count
+th count_wordgram.lua ../data/dianping/train_pinyin_word.t7b ../data/dianping/train_pinyin_wordgram_count/ ../data/dianping/train_pinyin_word_list.csv
+
+mkdir -p ../data/dianping/train_pinyin_wordgram_count_sort
+./sort_gram_count.sh ../data/dianping/train_pinyin_wordgram_count ../data/dianping/train_pinyin_wordgram_count_sort /tmp
+
+th combine_gram_count.lua ../data/dianping/train_pinyin_wordgram_count_sort/ ../data/dianping/train_pinyin_wordgram_count_combine.csv
+
+./sort_gram_list.sh ../data/dianping/train_pinyin_wordgram_count_combine.csv ../data/dianping/train_pinyin_wordgram_list.csv
+
+./limit_csv_lines.sh ../data/dianping/train_pinyin_wordgram_list.csv ../data/dianping/train_pinyin_wordgram_list_limit.csv 1000001
+```
+
+The commands proceeds by first using 10 threads to construct chunks of counts of word grams, and then sort and combine them to form the combined list. It is then sorted to list grams by its frequency, and finally we choose the 1,000,001 most frequent ones. This should be enough because we are limiting the number of features in 5-gram models to 1,000,000.
+
+Then, you can build the word-level 5-gram feature serialization files for romanized text using the following commands from `/data/dianping`
+
+```bash
+th construct_wordgram.lua ../data/dianping/train_pinyin_word.t7b ../data/dianping/train_pinyin_wordgram.t7b ../data/dianping/train_pinyin_wordgram_list_limit.csv
+th construct_wordgram.lua ../data/dianping/test_pinyin_word.t7b ../data/dianping/test_pinyin_wordgram.t7b ../data/dianping/train_pinyin_wordgram_list_limit.csv
+```
+
+Note that the features for testing data are built using the gram list from the training data.
+
+To build the feature serialization files for TFIDF version of the model, execute the following commands from `/data/dianping`
+
+```bash
+th construct_tfidf.lua ../data/dianping/train_pinyin_wordgram.t7b ../data/dianping/train_pinyin_wordgramtfidf.t7b ../data/dianping/train_pinyin_wordgram_list_limit.csv 1000000
+th construct_tfidf.lua ../data/dianping/test_pinyin_wordgram.t7b ../data/dianping/test_pinyin_wordgramtfidf.t7b ../data/dianping/train_pinyin_wordgram_list_limit.csv 1000000
+```
+
+#### Execute the Experiments
+
+To execute the experiment for word-level 5-gram linear model, run the following commands from `/linearnet`
+
+```bash
+mkdir -p models/dianping/wordgramroman
+./archive/dianping_wordgramroman.sh
+```
+
+And for the TFIDF version
+```bash
+mkdir -p models/dianping/wordgramtfidfroman
+./archive/dianping_wordgramtfidfroman.sh
+```
 
 ## fastText
 
@@ -306,3 +589,4 @@ mkdir -p models/dianping/temporal8length486feature256romanword
 ### Word-Level fastText for Original Text
 
 ### Word-Level fastText for Romanized Text
+
