@@ -4,7 +4,7 @@ This repository is used to publish all the code used for the following article:
 
 [Xiang Zhang, Yann LeCun, Which Encoding is the Best for Text Classification in Chinese, English, Japanese and Korean?, arXiv 1708.02657](https://arxiv.org/abs/1708.02657)
 
-The code is not yet completely released. Will update here when it is done.
+The code and datasets are completely released as of January 2018, including all the code for crawling, preprocessing and training on the datasets. However, the documentation may not be complete yet. That said, readers could refer to the `doc` directory for an example in reproducing all the results for the Dianping dataset, and extend that to other datasets in similar ways.
 
 ## Reproducibility Manifesto
 
